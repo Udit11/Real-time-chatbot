@@ -1,0 +1,1718 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Advanced Chat Widget</title>
+  <style>
+    * { box-sizing: border-box; }
+    
+    @keyframes gradient { 
+      0% { background-position: 0% 50%; } 
+      50% { background-position: 100% 50%; } 
+      100% { background-position: 0% 50%; } 
+    }
+    
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.95); }
+    }
+
+    @keyframes recording {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1) translateY(0); }
+      50% { transform: scale(1.02) translateY(-3px); }
+    }
+
+    @keyframes speakingPulse {
+      0%, 100% { 
+        transform: scale(1);
+        filter: brightness(1);
+      }
+      50% { 
+        transform: scale(1.03);
+        filter: brightness(1.1);
+      }
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes soundWave {
+      0%, 100% { transform: scaleY(0.5); }
+      50% { transform: scaleY(1.5); }
+    }
+    
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+      margin: 0; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      gap: 30px;
+      max-width: 1200px;
+      width: 100%;
+      animation: slideUp 0.4s ease-out;
+    }
+
+    .avatar-section {
+      flex: 0 0 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .avatar-display {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .avatar-display::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+    }
+
+    .avatar-canvas-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 20px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .avatar-static-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .avatar-static-image.speaking {
+      animation: speakingPulse 0.6s ease-in-out infinite;
+    }
+
+    .avatar-glow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at center, rgba(102, 126, 234, 0.3) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .avatar-glow.active {
+      opacity: 1;
+      animation: glowPulse 1.5s ease-in-out infinite;
+    }
+
+    .avatar-status {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .avatar-status.speaking {
+      display: flex;
+    }
+
+    .sound-wave {
+      display: flex;
+      gap: 3px;
+      height: 16px;
+      align-items: center;
+    }
+
+    .sound-bar {
+      width: 3px;
+      background: white;
+      border-radius: 2px;
+      animation: soundWave 0.6s ease-in-out infinite;
+    }
+
+    .sound-bar:nth-child(1) { animation-delay: 0s; height: 30%; }
+    .sound-bar:nth-child(2) { animation-delay: 0.1s; height: 50%; }
+    .sound-bar:nth-child(3) { animation-delay: 0.2s; height: 70%; }
+    .sound-bar:nth-child(4) { animation-delay: 0.1s; height: 50%; }
+    .sound-bar:nth-child(5) { animation-delay: 0s; height: 30%; }
+
+    .avatar-info {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .avatar-info h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      color: #1f2937;
+    }
+
+    .avatar-info p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .mood-indicator {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .mood-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    .mood-label {
+      font-size: 12px;
+      color: #10b981;
+      font-weight: 600;
+    }
+    
+    .widget { 
+      flex: 1;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
+      border-radius: 24px; 
+      overflow: hidden; 
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      height: 700px;
+    }
+    
+    header { 
+      background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+      background-size: 400% 400%;
+      animation: gradient 15s ease infinite;
+      color: #fff; 
+      padding: 20px 20px 24px; 
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    
+    .header-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .avatar-icon { 
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fff, #f0f0f0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      transition: transform 0.3s ease;
+      overflow: hidden;
+    }
+
+    .avatar-icon.speaking {
+      animation: breathe 1.5s ease-in-out infinite;
+    }
+    
+    .header-text h1 { 
+      font-size: 18px;
+      margin: 0 0 4px; 
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    
+    .header-text p { 
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.9;
+      font-weight: 400;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .header-btn {
+      background: rgba(255,255,255,0.2);
+      border: 2px solid rgba(255,255,255,0.4);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.1);
+    }
+
+    .header-btn.active {
+      background: rgba(255,255,255,0.95);
+      color: #667eea;
+      box-shadow: 0 0 20px rgba(255,255,255,0.5);
+    }
+    
+    #messages { 
+      flex: 1;
+      padding: 20px; 
+      overflow-y: auto; 
+      background: linear-gradient(to bottom, #fafbfc 0%, #f5f7fa 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+    
+    #messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    #messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    #messages::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.2);
+      border-radius: 3px;
+    }
+    
+    .msg { 
+      max-width: 75%; 
+      padding: 12px 16px; 
+      border-radius: 18px; 
+      display: inline-block;
+      animation: slideUp 0.3s ease-out;
+      position: relative;
+      word-wrap: break-word;
+      line-height: 1.5;
+      font-size: 15px;
+    }
+    
+    .msg.user { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; 
+      margin-left: auto; 
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      align-self: flex-end;
+    }
+    
+    .msg.bot { 
+      background: white;
+      color: #2d3748; 
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1px solid rgba(0,0,0,0.05);
+      align-self: flex-start;
+    }
+
+    .msg.escalated {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+
+    .sentiment-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    .sentiment-positive { background: #d4f4dd; color: #166534; }
+    .sentiment-negative { background: #fecaca; color: #991b1b; }
+    .sentiment-neutral { background: #e5e7eb; color: #374151; }
+    .sentiment-urgent { background: #fee2e2; color: #991b1b; animation: pulse 2s infinite; }
+
+    .msg-image {
+      max-width: 100%;
+      border-radius: 12px;
+      margin-top: 8px;
+    }
+    
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+      background: white;
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      width: fit-content;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #667eea;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    
+    footer { 
+      display: flex; 
+      gap: 10px; 
+      padding: 16px 20px; 
+      background: white;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    .input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    input[type="text"] { 
+      width: 100%;
+      padding: 14px 18px;
+      padding-right: 100px;
+      border-radius: 24px;
+      border: 2px solid rgba(0,0,0,0.06);
+      font-size: 15px;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+    
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .input-actions {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 4px;
+    }
+
+    .input-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      font-size: 16px;
+    }
+
+    .input-btn:hover {
+      background: rgba(102, 126, 234, 0.2);
+      transform: scale(1.1);
+    }
+
+    .input-btn.recording {
+      background: #ef4444;
+      color: white;
+      animation: recording 1.5s infinite;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+    
+    button.send-btn { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 14px 24px;
+      border-radius: 24px;
+      border: none; 
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    button.send-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    button.send-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    #status { 
+      font-size: 12px; 
+      color: #718096; 
+      padding: 8px 20px;
+      background: white;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #a0aec0;
+    }
+    
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    
+    .empty-state-text {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .error-msg {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 12px;
+      margin: 8px 0;
+      font-size: 13px;
+      border: 1px solid #fcc;
+    }
+
+    .escalation-banner {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      padding: 12px 20px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    .agent-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    .agent-modal.active {
+      display: flex;
+    }
+
+    .agent-card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .agent-avatar-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin: 0 auto 16px;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .agent-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #d4f4dd;
+      color: #166534;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .agent-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    .agent-card h2 {
+      font-size: 24px;
+      margin: 0 0 8px;
+      color: #1f2937;
+    }
+
+    .agent-card p {
+      color: #6b7280;
+      margin: 0 0 24px;
+      line-height: 1.6;
+    }
+
+    .agent-info {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .agent-info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .agent-info-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .agent-info-label {
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .agent-info-value {
+      color: #1f2937;
+      font-weight: 600;
+    }
+
+    .agent-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .agent-btn {
+      flex: 1;
+      padding: 14px 24px;
+      border-radius: 16px;
+      border: none;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .agent-btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .agent-btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .agent-btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .agent-btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .agent-btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .queue-position {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: white;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .queue-position.active {
+      display: flex;
+    }
+
+    .transfer-animation {
+      display: none;
+      justify-content: center;
+      gap: 8px;
+      margin: 24px 0;
+    }
+
+    .transfer-animation.active {
+      display: flex;
+    }
+
+    .transfer-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #667eea;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    .transfer-dot:nth-child(2) { animation-delay: 0.2s; }
+    .transfer-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @media (max-width: 1024px) {
+      .container {
+        flex-direction: column;
+      }
+      .avatar-section {
+        flex: 0 0 auto;
+      }
+      .widget {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body data-avatar-id="new">
+  <div class="container">
+    <!-- Avatar Section -->
+    <div class="avatar-section">
+      <div class="avatar-display">
+        <div class="avatar-canvas-wrapper">
+          <img id="avatarStaticImage" class="avatar-static-image" src="" alt="AI Assistant">
+          <div class="avatar-glow" id="avatarGlow"></div>
+          <div class="avatar-status" id="avatarStatus">
+            <div class="sound-wave">
+              <div class="sound-bar"></div>
+              <div class="sound-bar"></div>
+              <div class="sound-bar"></div>
+              <div class="sound-bar"></div>
+              <div class="sound-bar"></div>
+            </div>
+            <span>Speaking...</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="avatar-info">
+        <h3 id="avatarInfoName">AI Assistant</h3>
+        <p id="avatarInfoDesc">Your intelligent virtual assistant ready to help with any questions.</p>
+        <div class="mood-indicator">
+          <div class="mood-dot"></div>
+          <span class="mood-label">Active & Ready</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <div class="widget">
+      <header>
+        <div class="header-content">
+          <div class="header-left">
+            <div class="avatar-icon" id="headerAvatar">👤</div>
+            <div class="header-text">
+              <h1 id="avatarName">AI Assistant</h1>
+              <p id="avatarMeta">Voice • Vision • Context aware</p>
+            </div>
+          </div>
+          <div class="header-controls">
+            <button id="audioToggle" class="header-btn" title="Stop audio">🔊</button>
+            <button id="clearSession" class="header-btn" title="Clear conversation">🗑️</button>
+          </div>
+        </div>
+      </header>
+
+      <div id="messages" aria-live="polite">
+        <div class="empty-state">
+          <div class="empty-state-icon">💬</div>
+          <div class="empty-state-text">
+            Start chatting with text, voice, or images<br>
+            <small>Your conversation is saved automatically</small>
+          </div>
+        </div>
+      </div>
+
+      <div id="status">
+        <span class="status-indicator"></span>
+        <span id="statusText">Ready</span>
+      </div>
+
+      <form id="chatForm">
+        <footer>
+          <div class="input-wrapper">
+            <input id="messageInput" type="text" placeholder="Type, speak, or attach..." autocomplete="off" />
+            <div class="input-actions">
+              <button type="button" id="micBtn" class="input-btn" title="Voice input">🎤</button>
+              <button type="button" id="attachBtn" class="input-btn" title="Attach image">📎</button>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" />
+          </div>
+          <button class="send-btn" id="sendBtn" type="submit">Send</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Human Agent Escalation Modal -->
+  <div id="agentModal" class="agent-modal">
+    <div class="agent-card">
+      <img id="agentAvatarImage" class="agent-avatar-img" src="" alt="Agent">
+      
+      <div class="agent-status">
+        <span class="agent-status-dot"></span>
+        <span id="agentStatusText">Available</span>
+      </div>
+
+      <h2 id="agentModalName">Connecting to Agent...</h2>
+      <p id="agentDescription">Please wait while we connect you with a human agent</p>
+
+      <div id="queuePosition" class="queue-position">
+        <span>⏳</span>
+        <span id="queueText">Position in queue: 3</span>
+      </div>
+
+      <div id="transferAnimation" class="transfer-animation">
+        <div class="transfer-dot"></div>
+        <div class="transfer-dot"></div>
+        <div class="transfer-dot"></div>
+      </div>
+
+      <div id="agentInfo" style="display:none;" class="agent-info">
+        <div class="agent-info-row">
+          <span class="agent-info-label">Agent:</span>
+          <span class="agent-info-value" id="agentNameInfo">Sarah Johnson</span>
+        </div>
+        <div class="agent-info-row">
+          <span class="agent-info-label">Department:</span>
+          <span class="agent-info-value" id="agentDept">Customer Support</span>
+        </div>
+        <div class="agent-info-row">
+          <span class="agent-info-label">Experience:</span>
+          <span class="agent-info-value" id="agentExp">5 years</span>
+        </div>
+        <div class="agent-info-row">
+          <span class="agent-info-label">Rating:</span>
+          <span class="agent-info-value" id="agentRating">⭐ 4.9/5.0</span>
+        </div>
+      </div>
+
+      <div class="agent-actions">
+        <button class="agent-btn agent-btn-secondary" id="cancelEscalation">Cancel</button>
+        <button class="agent-btn agent-btn-primary" id="confirmEscalation" disabled>Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const API_BASE = window.API_BASE || 'http://localhost:8000';
+    
+    // DOM elements
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('messageInput');
+    const messages = document.getElementById('messages');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusText = document.getElementById('statusText');
+    const audioToggle = document.getElementById('audioToggle');
+    const clearSession = document.getElementById('clearSession');
+    const micBtn = document.getElementById('micBtn');
+    const attachBtn = document.getElementById('attachBtn');
+    const fileInput = document.getElementById('fileInput');
+    const avatarStaticImage = document.getElementById('avatarStaticImage');
+    const avatarGlow = document.getElementById('avatarGlow');
+    const avatarStatus = document.getElementById('avatarStatus');
+    const headerAvatar = document.getElementById('headerAvatar');
+    
+    // Agent modal elements
+    const agentModal = document.getElementById('agentModal');
+    const agentAvatarImage = document.getElementById('agentAvatarImage');
+    const agentStatusText = document.getElementById('agentStatusText');
+    const agentModalName = document.getElementById('agentModalName');
+    const agentDescription = document.getElementById('agentDescription');
+    const queuePosition = document.getElementById('queuePosition');
+    const queueText = document.getElementById('queueText');
+    const transferAnimation = document.getElementById('transferAnimation');
+    const agentInfo = document.getElementById('agentInfo');
+    const agentNameInfo = document.getElementById('agentNameInfo');
+    const agentDept = document.getElementById('agentDept');
+    const agentExp = document.getElementById('agentExp');
+    const agentRating = document.getElementById('agentRating');
+    const cancelEscalation = document.getElementById('cancelEscalation');
+    const confirmEscalation = document.getElementById('confirmEscalation');
+    
+    // State
+    let conversationHistory = [];
+    let currentAudio = null;
+    let sessionId = localStorage.getItem('chat_session_id') || null;
+    let recognition = null;
+    let isRecording = false;
+    let currentImage = null;
+    let isSpeaking = false;
+    let isEscalated = false;
+    let AVATAR_ID = null;
+    
+    // Avatar configuration (will be loaded dynamically from API)
+    let avatarConfig = {
+      gender: 'female',
+      voice_characteristics: {
+        tone: 'warm_friendly',
+        accent: 'neutral_american',
+        speed: 1.0,
+        gender: 'female',
+        pitch: 0
+      },
+      name: 'AI Assistant',
+      branding_elements: {
+        company_name: '',
+        theme_colors: []
+      }
+    };
+    
+    // Professional avatar images
+    const avatarImages = {
+      female: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80',
+      male: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=800&q=80',
+      neutral: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80'
+    };
+    
+    // Agent images
+    const agentImages = [
+      { 
+        name: 'Sarah Johnson', 
+        image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&q=80',
+        dept: 'Customer Support', 
+        exp: '5 years', 
+        rating: '4.9' 
+      },
+      { 
+        name: 'Mike Chen', 
+        image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80',
+        dept: 'Technical Support', 
+        exp: '7 years', 
+        rating: '4.8' 
+      },
+      { 
+        name: 'Emma Williams', 
+        image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80',
+        dept: 'Customer Success', 
+        exp: '4 years', 
+        rating: '4.9' 
+      },
+      { 
+        name: 'James Rodriguez', 
+        image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80',
+        dept: 'Customer Support', 
+        exp: '6 years', 
+        rating: '4.7' 
+      }
+    ];
+    
+    // Initialize speech recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+        stopRecording();
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        showStatus('Voice input failed: ' + event.error, true);
+        stopRecording();
+      };
+      
+      recognition.onend = () => {
+        stopRecording();
+      };
+    }
+    
+    // Load avatar configuration from API
+    async function loadAvatarConfig() {
+      try {
+        // Get avatar_id from URL parameter or body attribute
+        const urlParams = new URLSearchParams(window.location.search);
+        AVATAR_ID = urlParams.get('avatar_id') || document.body.dataset.avatarId || 'new';
+        
+        if (!AVATAR_ID || AVATAR_ID === 'new') {
+          console.log('No avatar_id provided, using default configuration');
+          return;
+        }
+        
+        showStatus('Loading avatar configuration...');
+        
+        const response = await fetch(`${API_BASE}/api/avatars/${AVATAR_ID}`);
+        
+        if (!response.ok) {
+          console.warn('Failed to load avatar config, using defaults');
+          showStatus('Ready');
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('Avatar configuration loaded:', data);
+        
+        // Update avatar config with API data
+        if (data.voice_characteristics) {
+          avatarConfig.voice_characteristics = {
+            tone: data.voice_characteristics.tone || 'warm_friendly',
+            accent: data.voice_characteristics.accent || 'neutral_american',
+            speed: data.voice_characteristics.speed || 1.0,
+            gender: data.voice_characteristics.gender || 'female',
+            pitch: data.voice_characteristics.pitch || 0
+          };
+          // Set the main gender based on voice gender
+          avatarConfig.gender = data.voice_characteristics.gender || 'female';
+        }
+        
+        // Update name
+        if (data.name) {
+          avatarConfig.name = data.name;
+        }
+        
+        // Apply visual branding
+        if (data.branding_elements) {
+          avatarConfig.branding_elements = data.branding_elements;
+          
+          // Update header and info with company name or avatar name
+          const displayName = data.branding_elements.company_name || data.name || 'AI Assistant';
+          document.getElementById('avatarName').textContent = displayName;
+          document.getElementById('avatarInfoName').textContent = displayName;
+          
+          // Apply theme colors
+          if (data.branding_elements.theme_colors && data.branding_elements.theme_colors.length > 0) {
+            const primaryColor = data.branding_elements.theme_colors[0];
+            document.documentElement.style.setProperty('--primary-color', primaryColor);
+          }
+          
+          // Apply font family
+          if (data.branding_elements.font_family) {
+            document.body.style.fontFamily = data.branding_elements.font_family;
+          }
+        }
+        
+        // Update meta information with gender and tone
+        const genderText = avatarConfig.voice_characteristics.gender.charAt(0).toUpperCase() + 
+                          avatarConfig.voice_characteristics.gender.slice(1);
+        const toneText = avatarConfig.voice_characteristics.tone.replace('_', ' ');
+        document.getElementById('avatarMeta').textContent = `${genderText} voice • ${toneText} • Context aware`;
+        
+        // Update description
+        document.getElementById('avatarInfoDesc').textContent = 
+          `Your ${genderText.toLowerCase()} AI assistant with ${toneText} tone, ready to help with any questions.`;
+        
+        showStatus('Avatar loaded: ' + displayName);
+        
+      } catch (err) {
+        console.error('Error loading avatar config:', err);
+        console.log('Using default configuration');
+        showStatus('Ready');
+      }
+    }
+    
+    // Initialize avatar
+    async function initAvatar() {
+      // Load avatar configuration from API
+      await loadAvatarConfig();
+      
+      // Set avatar image based on gender
+      const avatarUrl = avatarImages[avatarConfig.gender] || avatarImages.female;
+      avatarStaticImage.src = avatarUrl;
+      avatarStaticImage.alt = avatarConfig.gender + ' AI Assistant';
+      
+      // Load voices for Web Speech API
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+    }
+    
+    // Speaking animations
+    function startSpeakingAnimation() {
+      isSpeaking = true;
+      avatarStaticImage.classList.add('speaking');
+      avatarGlow.classList.add('active');
+      avatarStatus.classList.add('speaking');
+      headerAvatar.classList.add('speaking');
+    }
+    
+    function stopSpeakingAnimation() {
+      isSpeaking = false;
+      avatarStaticImage.classList.remove('speaking');
+      avatarGlow.classList.remove('active');
+      avatarStatus.classList.remove('speaking');
+      headerAvatar.classList.remove('speaking');
+    }
+    
+    // Text-to-Speech using Web Speech API with avatar voice characteristics
+    function speakText(text) {
+      if (!('speechSynthesis' in window)) {
+        console.warn('Text-to-speech not supported');
+        return;
+      }
+      
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voiceConfig = avatarConfig.voice_characteristics;
+      
+      // Get available voices
+      const voices = window.speechSynthesis.getVoices();
+      
+      // Filter voices by gender - IMPORTANT FOR MALE/FEMALE VOICE
+      let selectedVoice = null;
+      
+      if (voiceConfig.gender === 'male') {
+        // Find male voice
+        selectedVoice = voices.find(voice => {
+          const name = voice.name.toLowerCase();
+          const lang = voice.lang.toLowerCase();
+          return lang.startsWith('en') && (name.includes('male') || name.includes('man') || name.includes('david') || name.includes('james')) && !name.includes('female');
+        });
+        
+        // Fallback male voices
+        if (!selectedVoice) {
+          selectedVoice = voices.find(voice => 
+            voice.lang.startsWith('en') && !voice.name.toLowerCase().includes('female')
+          );
+        }
+      } else if (voiceConfig.gender === 'female') {
+        // Find female voice
+        selectedVoice = voices.find(voice => {
+          const name = voice.name.toLowerCase();
+          const lang = voice.lang.toLowerCase();
+          return lang.startsWith('en') && (name.includes('female') || name.includes('woman') || name.includes('samantha') || name.includes('victoria'));
+        });
+        
+        // Fallback female voices
+        if (!selectedVoice) {
+          selectedVoice = voices.find(voice => 
+            voice.lang.startsWith('en') && voice.name.toLowerCase().includes('female')
+          );
+        }
+      }
+      
+      // Try to match accent if no gender match found yet
+      if (!selectedVoice && voiceConfig.accent) {
+        selectedVoice = voices.find(voice => {
+          const name = voice.name.toLowerCase();
+          const lang = voice.lang.toLowerCase();
+          
+          if (voiceConfig.accent.includes('british')) {
+            return lang.includes('gb') || name.includes('british') || name.includes('uk') || name.includes('daniel') || name.includes('kate');
+          } else if (voiceConfig.accent.includes('australian')) {
+            return lang.includes('au') || name.includes('australian') || name.includes('karen');
+          } else if (voiceConfig.accent.includes('indian')) {
+            return lang.includes('in') || name.includes('india') || name.includes('veena') || name.includes('rishi');
+          }
+          return lang.includes('us') || lang.includes('en-us');
+        });
+      }
+      
+      // Final fallback to first available English voice
+      if (!selectedVoice) {
+        selectedVoice = voices.find(voice => voice.lang.startsWith('en')) || voices[0];
+      }
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        console.log('Selected voice:', selectedVoice.name, '- Gender:', voiceConfig.gender);
+      }
+      
+      // Apply voice characteristics
+      // Pitch: convert from -10 to +10 range to 0 to 2 range
+      utterance.pitch = Math.max(0.1, Math.min(2, 1 + (voiceConfig.pitch / 10)));
+      
+      // Rate/Speed
+      utterance.rate = Math.max(0.5, Math.min(2, voiceConfig.speed));
+      
+      // Add speaking animation callbacks
+      utterance.onstart = () => {
+        startSpeakingAnimation();
+        updateAudioUI(true);
+      };
+      
+      utterance.onend = () => {
+        stopSpeakingAnimation();
+        updateAudioUI(false);
+      };
+      
+      utterance.onerror = () => {
+        stopSpeakingAnimation();
+        updateAudioUI(false);
+      };
+      
+      window.speechSynthesis.speak(utterance);
+    }
+    
+    // Escalation functions
+    function showEscalation(reason) {
+      const escalationBanner = document.createElement('div');
+      escalationBanner.className = 'escalation-banner';
+      escalationBanner.textContent = '⚠️ ' + reason + ' - Connecting to human agent...';
+      document.querySelector('.widget').insertBefore(escalationBanner, document.getElementById('messages'));
+      
+      setTimeout(() => {
+        showAgentModal(reason);
+        escalationBanner.remove();
+      }, 1500);
+    }
+    
+    function showAgentModal(reason) {
+      const agent = agentImages[Math.floor(Math.random() * agentImages.length)];
+      
+      agentModal.classList.add('active');
+      agentAvatarImage.src = agent.image;
+      agentStatusText.textContent = 'Connecting...';
+      agentModalName.textContent = 'Connecting to Agent...';
+      agentDescription.textContent = 'Reason: ' + reason + '. Please wait while we find an available agent.';
+      queuePosition.classList.remove('active');
+      transferAnimation.classList.add('active');
+      agentInfo.style.display = 'none';
+      confirmEscalation.textContent = 'Continue';
+      confirmEscalation.disabled = true;
+      
+      let queuePos = Math.floor(Math.random() * 5) + 1;
+      
+      if (queuePos > 1) {
+        setTimeout(() => {
+          transferAnimation.classList.remove('active');
+          queuePosition.classList.add('active');
+          queueText.textContent = 'Position in queue: ' + queuePos;
+          
+          const queueInterval = setInterval(() => {
+            queuePos--;
+            if (queuePos <= 1) {
+              clearInterval(queueInterval);
+              connectAgent(agent);
+            } else {
+              queueText.textContent = 'Position in queue: ' + queuePos;
+            }
+          }, 1500);
+        }, 2000);
+      } else {
+        setTimeout(() => {
+          connectAgent(agent);
+        }, 2500);
+      }
+    }
+    
+    function connectAgent(agent) {
+      transferAnimation.classList.remove('active');
+      queuePosition.classList.remove('active');
+      agentAvatarImage.src = agent.image;
+      agentStatusText.textContent = 'Available';
+      agentModalName.textContent = agent.name;
+      agentDescription.textContent = agent.name + ' from ' + agent.dept + ' is ready to assist you.';
+      
+      agentInfo.style.display = 'block';
+      agentNameInfo.textContent = agent.name;
+      agentDept.textContent = agent.dept;
+      agentExp.textContent = agent.exp;
+      agentRating.textContent = '⭐ ' + agent.rating + '/5.0';
+      
+      confirmEscalation.disabled = false;
+      confirmEscalation.textContent = 'Start Chat';
+      
+      playNotificationSound();
+    }
+    
+    function playNotificationSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.5);
+      } catch (err) {
+        console.log('Notification sound not available');
+      }
+    }
+    
+    function startAgentChat() {
+      isEscalated = true;
+      agentModal.classList.remove('active');
+      
+      const systemMsg = document.createElement('div');
+      systemMsg.className = 'msg bot escalated';
+      systemMsg.innerHTML = '<span>✅ You are now connected with ' + agentNameInfo.textContent + '. A human agent will respond shortly.</span><div class="sentiment-badge sentiment-positive">AGENT CONNECTED</div>';
+      messages.appendChild(systemMsg);
+      messages.scrollTop = messages.scrollHeight;
+      
+      document.getElementById('avatarName').textContent = agentNameInfo.textContent;
+      document.getElementById('avatarMeta').textContent = '🟢 Human Agent • Live Support';
+      document.getElementById('avatarInfoName').textContent = agentNameInfo.textContent;
+      document.getElementById('avatarInfoDesc').textContent = 'Professional ' + agentDept.textContent.toLowerCase() + ' agent with ' + agentExp.textContent + ' of experience.';
+      
+      setTimeout(() => {
+        simulateAgentResponse();
+      }, 3000);
+      
+      showStatus('Connected to human agent');
+    }
+    
+    function simulateAgentResponse() {
+      showTyping();
+      
+      setTimeout(() => {
+        hideTyping();
+        
+        const responses = [
+          "Hi! I'm here to help. I've reviewed your conversation and I understand your concern. Let me assist you with that right away.",
+          "Hello! Thanks for your patience. I can see you've been experiencing some issues. I'm here to resolve this for you personally.",
+          "Hi there! I've taken over from the AI assistant. I'm looking at your account now and I'll make sure we get this sorted out for you."
+        ];
+        
+        const response = responses[Math.floor(Math.random() * responses.length)];
+        addMessage(response, false, 'positive', true);
+      }, 2000 + Math.random() * 2000);
+    }
+    
+    function cancelAgentEscalation() {
+      agentModal.classList.remove('active');
+      showStatus('Escalation cancelled. Continuing with AI assistant.');
+      
+      const cancelMsg = document.createElement('div');
+      cancelMsg.className = 'msg bot';
+      cancelMsg.innerHTML = '<span>Understood. I\'ll continue to assist you. If you need a human agent at any time, just let me know!</span>';
+      messages.appendChild(cancelMsg);
+      messages.scrollTop = messages.scrollHeight;
+    }
+    
+    // Helpers
+    function showStatus(msg, isError) {
+      statusText.textContent = msg;
+      if (isError) {
+        setTimeout(() => { statusText.textContent = 'Ready'; }, 3000);
+      }
+    }
+    
+    function removeEmptyState() {
+      const emptyState = messages.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+    }
+    
+    function getSentimentClass(sentiment) {
+      return 'sentiment-' + sentiment;
+    }
+    
+    function addMessage(text, isUser, sentiment, isEscalated, imageUrl) {
+      removeEmptyState();
+      
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'msg ' + (isUser ? 'user' : 'bot') + (isEscalated ? ' escalated' : '');
+      
+      if (imageUrl) {
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.className = 'msg-image';
+        msgDiv.appendChild(img);
+      }
+      
+      const textSpan = document.createElement('span');
+      textSpan.textContent = text;
+      msgDiv.appendChild(textSpan);
+      
+      if (sentiment && !isUser) {
+        const badge = document.createElement('div');
+        badge.className = 'sentiment-badge ' + getSentimentClass(sentiment);
+        badge.textContent = sentiment.toUpperCase();
+        msgDiv.appendChild(badge);
+      }
+      
+      messages.appendChild(msgDiv);
+      messages.scrollTop = messages.scrollHeight;
+    }
+    
+    function showTyping() {
+      removeEmptyState();
+      const typing = document.createElement('div');
+      typing.className = 'typing-indicator';
+      typing.id = 'typing';
+      typing.innerHTML = '<span></span><span></span><span></span>';
+      messages.appendChild(typing);
+      messages.scrollTop = messages.scrollHeight;
+    }
+    
+    function hideTyping() {
+      const typing = document.getElementById('typing');
+      if (typing) typing.remove();
+    }
+    
+    function updateAudioUI(playing) {
+      audioToggle.classList.toggle('active', playing);
+      audioToggle.textContent = playing ? '⏸️' : '🔊';
+    }
+    
+    function stopAudio() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+      }
+      // Also stop Web Speech API
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      updateAudioUI(false);
+      stopSpeakingAnimation();
+    }
+    
+    function playAudio(base64Audio) {
+      try {
+        stopAudio();
+        
+        // Use provided audio from backend
+        const audio = new Audio('data:audio/mp3;base64,' + base64Audio);
+        currentAudio = audio;
+        
+        updateAudioUI(true);
+        startSpeakingAnimation();
+        
+        audio.onended = () => {
+          currentAudio = null;
+          updateAudioUI(false);
+          stopSpeakingAnimation();
+        };
+        
+        audio.onerror = () => {
+          console.error('Audio playback error');
+          updateAudioUI(false);
+          stopSpeakingAnimation();
+        };
+        
+        audio.play().catch(err => {
+          console.error('Audio play failed:', err);
+          updateAudioUI(false);
+          stopSpeakingAnimation();
+        });
+      } catch (err) {
+        console.error('Audio setup error:', err);
+      }
+    }
+    
+    function startRecording() {
+      if (!recognition) {
+        showStatus('Voice input not supported in this browser', true);
+        return;
+      }
+      
+      try {
+        recognition.start();
+        isRecording = true;
+        micBtn.classList.add('recording');
+        showStatus('Listening...');
+      } catch (err) {
+        console.error('Recording start error:', err);
+      }
+    }
+    
+    function stopRecording() {
+      if (recognition && isRecording) {
+        recognition.stop();
+      }
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      showStatus('Ready');
+    }
+    
+    async function imageToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    async function sendMessage(userMessage, imageFile) {
+      try {
+        sendBtn.disabled = true;
+        input.disabled = true;
+        showStatus('Sending...');
+        
+        let imageBase64 = null;
+        let imageUrl = null;
+        
+        if (imageFile) {
+          imageBase64 = await imageToBase64(imageFile);
+          imageUrl = URL.createObjectURL(imageFile);
+        }
+        
+        conversationHistory.push({
+          role: 'user',
+          content: userMessage,
+          timestamp: new Date().toISOString()
+        });
+        
+        addMessage(userMessage, true, null, false, imageUrl);
+        showTyping();
+        
+        const payload = {
+          avatar_id: AVATAR_ID,
+          messages: conversationHistory,
+          session_id: sessionId
+        };
+        
+        if (imageBase64) {
+          payload.image_base64 = imageBase64;
+        }
+        
+        const response = await fetch(API_BASE + '/api/chat/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || 'HTTP ' + response.status);
+        }
+        
+        const data = await response.json();
+        
+        if (data.session_id) {
+          sessionId = data.session_id;
+          localStorage.setItem('chat_session_id', sessionId);
+        }
+        
+        conversationHistory.push({
+          role: 'assistant',
+          content: data.reply,
+          timestamp: new Date().toISOString(),
+          sentiment: data.sentiment ? data.sentiment.sentiment : null
+        });
+        
+        hideTyping();
+        
+        if (data.escalated) {
+          showEscalation(data.escalation_reason);
+          addMessage(data.reply, false, data.sentiment ? data.sentiment.sentiment : null, true);
+        } else {
+          addMessage(data.reply, false, data.sentiment ? data.sentiment.sentiment : null);
+        }
+        
+        // Use backend audio if available, otherwise use TTS with avatar voice
+        if (data.audio_base64) {
+          playAudio(data.audio_base64);
+        } else {
+          // Fallback to Web Speech API with avatar voice characteristics
+          speakText(data.reply);
+        }
+        
+        showStatus('Ready • ' + (data.sentiment ? data.sentiment.intent : 'chat') + ' detected');
+        
+      } catch (err) {
+        console.error('Chat error:', err);
+        hideTyping();
+        
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'error-msg';
+        errorMsg.textContent = 'Error: ' + err.message;
+        messages.appendChild(errorMsg);
+        messages.scrollTop = messages.scrollHeight;
+        
+        showStatus('Failed to send message', true);
+      } finally {
+        sendBtn.disabled = false;
+        input.disabled = false;
+        input.focus();
+        currentImage = null;
+      }
+    }
+    
+    // Event listeners
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      
+      input.value = '';
+      sendMessage(text, currentImage);
+    });
+    
+    audioToggle.addEventListener('click', stopAudio);
+    
+    clearSession.addEventListener('click', async () => {
+      if (!confirm('Clear conversation history?')) return;
+      
+      if (sessionId) {
+        try {
+          await fetch(API_BASE + '/api/chat/session/' + sessionId, {
+            method: 'DELETE'
+          });
+        } catch (err) {
+          console.error('Clear session error:', err);
+        }
+      }
+      
+      conversationHistory = [];
+      sessionId = null;
+      localStorage.removeItem('chat_session_id');
+      messages.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-text">Conversation cleared</div></div>';
+      showStatus('Ready');
+    });
+    
+    micBtn.addEventListener('click', () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+    
+    attachBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        currentImage = file;
+        input.placeholder = 'Image attached: ' + file.name;
+        showStatus('Image ready: ' + file.name);
+      }
+    });
+    
+    cancelEscalation.addEventListener('click', cancelAgentEscalation);
+    confirmEscalation.addEventListener('click', startAgentChat);
+    
+    // Initialize
+    initAvatar();
+    input.focus();
+    
+    console.log('Advanced chat initialized. Backend: ' + API_BASE);
+  </script>
+</body>
+</html>

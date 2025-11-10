@@ -1,0 +1,22 @@
+@"
+# Node / React
+frontend/node_modules/
+frontend/build/
+
+# Python
+backend/venv/
+backend/__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment
+.env
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+"@ | Set-Content .gitignore -Encoding UTF8
