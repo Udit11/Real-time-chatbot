@@ -42,6 +42,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None  # For context retention
     image_base64: Optional[str] = None  # For image input
     audio_base64: Optional[str] = None  # For voice input
+    voice_gender: Optional[str] = None  # Gender from frontend config
 
     @root_validator(pre=True)
     def promote_message_to_messages(cls, values):
@@ -263,6 +264,28 @@ def save_session(session_id: str, messages: List[ChatMessage]):
     SESSION_STORE[session_id] = messages[-50:]  # Keep last 50 messages
 
 
+# --- Add helper to normalize voice characteristics ---
+def _normalize_voice_characteristics(vc: Optional[Dict]) -> Dict:
+    """
+    Normalize voice characteristics dict to ensure consistent 'gender' and 'tone' keys.
+    Accepts various inputs like 'Male', 'm', etc.
+    """
+    vc = vc or {}
+    raw_gender = str(vc.get("gender") or "").strip().lower()
+    
+    # normalize gender
+    if raw_gender in ("m", "male", "man", "masculine"):
+        gender = "male"
+    elif raw_gender in ("f", "female", "woman", "feminine"):
+        gender = "female"
+    else:
+        gender = "neutral"
+    
+    tone = str(vc.get("tone") or "warm_friendly").strip().lower()
+    
+    return {"gender": gender, "tone": tone}
+
+
 # ==============================
 # Endpoints
 # ==============================
@@ -270,17 +293,18 @@ def save_session(session_id: str, messages: List[ChatMessage]):
 @router.post("/api/chat/generate")
 async def generate_chat(payload: ChatRequest, db: Session = Depends(get_db)):
     """
-    Main chat endpoint with all features:
-    - Text/voice/image input
-    - Context retention
-    - Sentiment analysis
-    - Auto-escalation
+    Main chat endpoint with server-side TTS.
+    Synthesizes audio with correct gender-based voice and returns base64.
     """
     if not payload.messages or len(payload.messages) == 0:
         raise HTTPException(
             status_code=422,
             detail=[{"loc": ["body", "messages"], "msg": "Field required", "type": "missing"}],
         )
+
+    # Log incoming payload
+    print(f"[generate_chat] Received payload voice_gender: {payload.voice_gender}")
+    print(f"[generate_chat] Payload avatar_id: {payload.avatar_id}")
 
     # Get or create session
     session_id, session_history = get_or_create_session(payload.session_id)
@@ -302,45 +326,36 @@ async def generate_chat(payload: ChatRequest, db: Session = Depends(get_db)):
     # Combine session history with new messages
     full_context = session_history + payload.messages
     
-    # Load avatar
-    avatar_uuid = parse_avatar_id(payload.avatar_id)
-    avatar_obj = None
-    if avatar_uuid:
-        avatar_obj = db.query(Avatar).filter(Avatar.id == avatar_uuid).first()
-        if not avatar_obj:
-            raise HTTPException(status_code=404, detail="Avatar not found")
-    else:
-        # === START: Minimal AB test selection block ===
-        # If avatar_id is "new" or not provided, attempt to pick avatar from active AB test.
-        # This is intentionally minimal: if no ABTest model exists, this block does nothing.
-        try:
-            # Attempt to import ABTest model (optional)
-            from app.models.ab_test import ABTest  # type: ignore
-            # Find first active AB test (adjust field names if your ABTest model differs)
-            active_test = db.query(ABTest).filter(ABTest.is_active == True).first()
-            if active_test:
-                # simple deterministic pick based on session_id
-                sid = session_id or str(uuid.uuid4())
-                import hashlib
-                h = hashlib.sha256(f"{active_test.id}:{sid}".encode("utf-8")).hexdigest()
-                v = int(h[:8], 16) % 100
-                variant = "A" if v < getattr(active_test, "traffic_split", 50) else "B"
-                chosen_id = getattr(active_test, "avatar_a_id", None) if variant == "A" else getattr(active_test, "avatar_b_id", None)
-                if chosen_id:
-                    avatar_obj = db.query(Avatar).filter(Avatar.id == chosen_id).first()
-        except Exception:
-            # If AB test model doesn't exist or any error happens, silently continue with avatar_obj = None
-            avatar_obj = avatar_obj
-        # === END: Minimal AB test selection block ===
+    # Priority 1: Use voice_gender from frontend if provided
+    voice_gender = None
+    if payload.voice_gender:
+        voice_gender = payload.voice_gender.lower()
+        print(f"[generate_chat] Using voice_gender from frontend: {voice_gender}")
+    
+    # Priority 2: Fall back to avatar's voice_characteristics from DB
+    if not voice_gender:
+        avatar_uuid = parse_avatar_id(payload.avatar_id)
+        if avatar_uuid:
+            avatar_obj = db.query(Avatar).filter(Avatar.id == avatar_uuid).first()
+            if avatar_obj and avatar_obj.voice_characteristics:
+                voice_gender = avatar_obj.voice_characteristics.get("gender", "").lower()
+                print(f"[generate_chat] Using voice_gender from avatar DB: {voice_gender}")
+        
+        # Priority 3: Default to neutral/female
+        if not voice_gender:
+            voice_gender = "neutral"
+            print(f"[generate_chat] No voice_gender found, defaulting to: neutral")
+    
+    # Normalize and get voice config
+    voice_chars = _normalize_voice_characteristics({"gender": voice_gender or "neutral"})
+    voice_config = tts_utils.get_voice_config(voice_chars)
+    
+    print(f"[generate_chat] FINAL: voice_gender={voice_gender} -> {voice_config['voice']}")
 
     # Check if should escalate to human
     if sentiment_analysis.should_escalate:
         escalation_msg = f"I understand this is {sentiment_analysis.sentiment}. Let me connect you with a human agent who can better assist you."
         
-        # Generate voice for escalation
-        voice_config = tts_utils.get_voice_config(
-            avatar_obj.voice_characteristics if avatar_obj else {"gender": "female", "tone": "warm_friendly"}
-        )
         audio_bytes = await synthesize_edge_tts_to_bytes(
             escalation_msg,
             voice_config["voice"],
@@ -370,13 +385,8 @@ async def generate_chat(payload: ChatRequest, db: Session = Depends(get_db)):
         sentiment=sentiment_analysis.sentiment
     ))
     save_session(session_id, full_context)
-
-    # Get voice config
-    voice_config = tts_utils.get_voice_config(
-        avatar_obj.voice_characteristics if avatar_obj else {"gender": "female", "tone": "warm_friendly"}
-    )
     
-    # Synthesize audio
+    # Synthesize audio with correct gender-based voice
     audio_bytes = await synthesize_edge_tts_to_bytes(
         clean_reply,
         voice_config["voice"],
@@ -443,8 +453,12 @@ async def synthesize_avatar_text(avatar_id: str, payload: Dict[str, str], db: Se
     if not avatar:
         raise HTTPException(status_code=404, detail="Avatar not found")
 
-    voice_config = tts_utils.get_voice_config(avatar.voice_characteristics or {})
+    # Normalize avatar's voice characteristics to ensure correct gender selection
+    voice_chars = _normalize_voice_characteristics(avatar.voice_characteristics or {})
+    voice_config = tts_utils.get_voice_config(voice_chars)
     clean_text = clean_text_for_tts(text)
+    
+    print(f"[synthesize] Avatar gender: {voice_chars.get('gender')}, Using voice: {voice_config['voice']}")
     
     audio_bytes = await synthesize_edge_tts_to_bytes(
         clean_text,

@@ -54,10 +54,16 @@
       50% { transform: scaleY(1.5); }
     }
     
+    :root {
+      --primary-color-1: #667eea;
+      --primary-color-2: #764ba2;
+      --primary-color-3: #f093fb;
+    }
+    
     body { 
       font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
       margin: 0; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--primary-color-1) 0%, var(--primary-color-2) 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -98,7 +104,7 @@
       left: 0;
       right: 0;
       height: 4px;
-      background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+      background: linear-gradient(-45deg, var(--primary-color-1), var(--primary-color-2), var(--primary-color-3));
       background-size: 400% 400%;
       animation: gradient 15s ease infinite;
     }
@@ -109,7 +115,7 @@
       aspect-ratio: 1;
       border-radius: 20px;
       overflow: hidden;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--primary-color-1) 0%, var(--primary-color-2) 100%);
     }
 
     .avatar-static-image {
@@ -237,7 +243,7 @@
     }
     
     header { 
-      background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+      background: linear-gradient(-45deg, var(--primary-color-1), var(--primary-color-2), var(--primary-color-3));
       background-size: 400% 400%;
       animation: gradient 15s ease infinite;
       color: #fff; 
@@ -332,7 +338,7 @@
 
     .header-btn.active {
       background: rgba(255,255,255,0.95);
-      color: #667eea;
+      color: var(--primary-color-1);
       box-shadow: 0 0 20px rgba(255,255,255,0.5);
     }
     
@@ -373,7 +379,7 @@
     }
     
     .msg.user { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--primary-color-1) 0%, var(--primary-color-2) 100%);
       color: white; 
       margin-left: auto; 
       border-bottom-right-radius: 4px;
@@ -431,7 +437,7 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #667eea;
+      background: var(--primary-color-1);
       animation: pulse 1.4s ease-in-out infinite;
     }
     
@@ -466,7 +472,7 @@
     
     input[type="text"]:focus {
       outline: none;
-      border-color: #667eea;
+      border-color: var(--primary-color-1);
       background: white;
       box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
     }
@@ -486,7 +492,7 @@
       border-radius: 50%;
       border: none;
       background: rgba(102, 126, 234, 0.1);
-      color: #667eea;
+      color: var(--primary-color-1);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -511,7 +517,7 @@
     }
     
     button.send-btn { 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--primary-color-1) 0%, var(--primary-color-2) 100%);
       color: white;
       padding: 14px 24px;
       border-radius: 24px;
@@ -707,7 +713,7 @@
     }
 
     .agent-btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--primary-color-1) 0%, var(--primary-color-2) 100%);
       color: white;
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
@@ -763,7 +769,7 @@
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background: #667eea;
+      background: var(--primary-color-1);
       animation: pulse 1s ease-in-out infinite;
     }
 
@@ -781,6 +787,42 @@
         max-width: 100%;
       }
     }
+
+    /* Simple lip/mouth styles and animation */
+    .avatar-mouth {
+      position: absolute;
+      left: 50%;
+      bottom: 18%;
+      transform: translateX(-50%);
+      width: 44px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .avatar-mouth .lip {
+      width: 70%;
+      height: 6px;
+      background: rgba(45,55,72,0.95);
+      border-radius: 6px;
+      transform-origin: center;
+      transition: transform 120ms linear;
+    }
+
+    @keyframes lipMove {
+      0% { transform: scaleY(1); }
+      25% { transform: scaleY(1.4); }
+      50% { transform: scaleY(1.8); }
+      75% { transform: scaleY(1.2); }
+      100% { transform: scaleY(1); }
+    }
+
+    .avatar-mouth.speaking .lip {
+      animation: lipMove 420ms ease-in-out infinite;
+    }
   </style>
 </head>
 <body data-avatar-id="new">
@@ -791,6 +833,10 @@
         <div class="avatar-canvas-wrapper">
           <img id="avatarStaticImage" class="avatar-static-image" src="" alt="AI Assistant">
           <div class="avatar-glow" id="avatarGlow"></div>
+          <!-- lip/mouth element for simple lip-sync animation -->
+          <div class="avatar-mouth" id="avatarMouth" aria-hidden="true">
+            <div class="lip" id="avatarLip"></div>
+          </div>
           <div class="avatar-status" id="avatarStatus">
             <div class="sound-wave">
               <div class="sound-bar"></div>
@@ -819,7 +865,7 @@
       <header>
         <div class="header-content">
           <div class="header-left">
-            <div class="avatar-icon" id="headerAvatar">👤</div>
+            <div class="avatar-icon" id="headerAvatar">🤖</div>
             <div class="header-text">
               <h1 id="avatarName">AI Assistant</h1>
               <p id="avatarMeta">Voice • Vision • Context aware</p>
@@ -974,7 +1020,18 @@
       name: 'AI Assistant',
       branding_elements: {
         company_name: '',
-        theme_colors: []
+        theme_colors: ['#667eea', '#764ba2', '#f093fb'],
+        font_family: 'Inter, sans-serif',
+        background_color: '#FFFFFF'
+      },
+      visual_appearance: {
+        face: {
+          skin_tone: '#8B7355'
+        },
+        clothing: {
+          primary_color: '#2C5F8D',
+          secondary_color: '#5CA3D5'
+        }
       }
     };
     
@@ -1042,31 +1099,160 @@
       };
     }
     
+    // Apply theme colors dynamically to entire UI
+    function applyThemeColors(themeColors) {
+      if (!themeColors || themeColors.length === 0) {
+        themeColors = ['#667eea', '#764ba2', '#f093fb']; // fallback defaults
+      }
+      
+      const color1 = themeColors[0] || '#667eea';
+      const color2 = themeColors[1] || '#764ba2';
+      const color3 = themeColors[2] || color1;
+      
+      console.log('Applying theme colors:', color1, color2, color3);
+      
+      // Update CSS variables
+      document.documentElement.style.setProperty('--primary-color-1', color1);
+      document.documentElement.style.setProperty('--primary-color-2', color2);
+      document.documentElement.style.setProperty('--primary-color-3', color3);
+      
+      // Update body background gradient
+      document.body.style.background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+    }
+    
+    // Apply clothing colors to avatar display
+    function applyClothingColors(primaryColor, secondaryColor) {
+      const avatarCanvas = document.querySelector('.avatar-canvas-wrapper');
+      if (avatarCanvas && primaryColor && secondaryColor) {
+        avatarCanvas.style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+        console.log('Applied clothing colors:', primaryColor, secondaryColor);
+      }
+    }
+    
+    // Apply font family
+    function applyFontFamily(fontFamily) {
+      if (fontFamily) {
+        document.body.style.fontFamily = fontFamily;
+        console.log('Applied font family:', fontFamily);
+      }
+    }
+    
     // Load avatar configuration from API
     async function loadAvatarConfig() {
       try {
-        // Get avatar_id from URL parameter or body attribute
+        // Check URL params for a full config first (encoded), otherwise fall back to avatar_id
         const urlParams = new URLSearchParams(window.location.search);
-        AVATAR_ID = urlParams.get('avatar_id') || document.body.dataset.avatarId || 'new';
+        const configParam = urlParams.get('config');
+        const urlAvatarId = urlParams.get('avatar_id');
+        AVATAR_ID = urlAvatarId || document.body.dataset.avatarId || 'new';
         
+        console.log('[loadAvatarConfig] URL avatar_id param:', urlAvatarId);
+        console.log('[loadAvatarConfig] AVATAR_ID set to:', AVATAR_ID);
+        
+        if (configParam) {
+          try {
+            console.log('=== DECODING CONFIG PARAM ===');
+            console.log('[loadAvatarConfig] Raw config param (first 100 chars):', configParam.substring(0, 100));
+            
+            // Decode base64-UTF8 encoded JSON (encoded with: btoa(unescape(encodeURIComponent(json))))
+            const decoded = decodeURIComponent(configParam);
+            console.log('[loadAvatarConfig] After decodeURIComponent (first 100 chars):', decoded.substring(0, 100));
+            
+            const jsonString = decodeURIComponent(escape(atob(decoded)));
+            console.log('[loadAvatarConfig] Final JSON string (first 200 chars):', jsonString.substring(0, 200));
+            
+            const parsed = JSON.parse(jsonString);
+            console.log('[loadAvatarConfig] Parsed config:', parsed);
+            console.log('[loadAvatarConfig] Gender from parsed config:', parsed.voice_characteristics?.gender);
+            
+            // IMPORTANT: Extract avatar ID from parsed config
+            if (parsed.id) {
+              AVATAR_ID = parsed.id;
+              console.log('[loadAvatarConfig] AVATAR_ID updated from config:', AVATAR_ID);
+            }
+            
+            // Merge parsed config into avatarConfig
+            avatarConfig = { ...avatarConfig, ...parsed };
+            if (parsed.voice_characteristics) {
+              avatarConfig.voice_characteristics = { ...avatarConfig.voice_characteristics, ...parsed.voice_characteristics };
+              avatarConfig.gender = parsed.voice_characteristics.gender || avatarConfig.gender;
+              console.log('[loadAvatarConfig] After merge - avatarConfig.voice_characteristics:', avatarConfig.voice_characteristics);
+              console.log('[loadAvatarConfig] After merge - avatarConfig.gender:', avatarConfig.gender);
+            }
+            if (parsed.visual_appearance) {
+              avatarConfig.visual_appearance = { ...avatarConfig.visual_appearance, ...parsed.visual_appearance };
+            }
+            if (parsed.branding_elements) {
+              avatarConfig.branding_elements = { ...avatarConfig.branding_elements, ...parsed.branding_elements };
+            }
+            
+            // CRITICAL: Make avatarConfig globally accessible
+            window.avatarConfig = avatarConfig;
+            console.log('[loadAvatarConfig] Set window.avatarConfig.voice_characteristics.gender to:', window.avatarConfig.voice_characteristics.gender);
+            
+            // Apply UI from provided config
+            applyThemeColors(avatarConfig.branding_elements.theme_colors);
+            applyFontFamily(avatarConfig.branding_elements.font_family);
+            applyClothingColors(
+              avatarConfig.visual_appearance.clothing.primary_color,
+              avatarConfig.visual_appearance.clothing.secondary_color
+            );
+            
+            const displayName = avatarConfig.branding_elements.company_name || avatarConfig.name || 'AI Assistant';
+            document.getElementById('avatarName').textContent = displayName;
+            document.getElementById('avatarInfoName').textContent = displayName;
+            
+            const genderText = (avatarConfig.voice_characteristics.gender || 'neutral').charAt(0).toUpperCase() +
+                              (avatarConfig.voice_characteristics.gender || 'neutral').slice(1);
+            const toneText = (avatarConfig.voice_characteristics.tone || 'warm_friendly').replace('_', ' ');
+            document.getElementById('avatarMeta').textContent = `${genderText} voice • ${toneText} • Context aware`;
+            document.getElementById('avatarInfoDesc').textContent =
+              `Your ${genderText.toLowerCase()} AI assistant with ${toneText} tone, ready to help with any questions.`;
+            
+            // Generate small inline SVG that reflects skin tone and clothing gradient
+            try {
+              const svg = generateInlineAvatarSVG(
+                avatarConfig.visual_appearance.face?.skin_tone || '#e0b084',
+                avatarConfig.visual_appearance.clothing?.primary_color || '#667eea',
+                avatarConfig.visual_appearance.clothing?.secondary_color || '#764ba2',
+                avatarConfig.voice_characteristics.gender || 'neutral'
+              );
+              avatarStaticImage.src = svg;
+            } catch (err) {
+              console.warn('Inline avatar generation failed, falling back to photos', err);
+              avatarStaticImage.src = avatarImages[avatarConfig.gender] || avatarImages.female;
+            }
+            
+            showStatus('Preview loaded from saved avatar');
+            console.log('=== CONFIG LOADED SUCCESSFULLY ===');
+            return; // skip avatar_id API fetch
+          } catch (err) {
+            console.warn('Failed to parse config param, falling back to avatar_id', err);
+            // continue to avatar_id flow below
+          }
+        }
+        
+        // If config param not present or failed, fall back to avatar_id fetch
         if (!AVATAR_ID || AVATAR_ID === 'new') {
           console.log('No avatar_id provided, using default configuration');
+          applyThemeColors(avatarConfig.branding_elements.theme_colors);
+          applyClothingColors(avatarConfig.visual_appearance.clothing.primary_color, avatarConfig.visual_appearance.clothing.secondary_color);
           return;
         }
         
         showStatus('Loading avatar configuration...');
-        
         const response = await fetch(`${API_BASE}/api/avatars/${AVATAR_ID}`);
-        
         if (!response.ok) {
           console.warn('Failed to load avatar config, using defaults');
           showStatus('Ready');
+          applyThemeColors(avatarConfig.branding_elements.theme_colors);
+          applyClothingColors(avatarConfig.visual_appearance.clothing.primary_color, avatarConfig.visual_appearance.clothing.secondary_color);
           return;
         }
-        
         const data = await response.json();
         console.log('Avatar configuration loaded:', data);
-        
+        console.log('[loadAvatarConfig] Avatar gender from API:', data.voice_characteristics?.gender);
+
         // Update avatar config with API data
         if (data.voice_characteristics) {
           avatarConfig.voice_characteristics = {
@@ -1079,6 +1265,15 @@
           // Set the main gender based on voice gender
           avatarConfig.gender = data.voice_characteristics.gender || 'female';
         }
+
+        // CRITICAL: Ensure avatarConfig is globally accessible for fallbackSpeak()
+        window.avatarConfig = avatarConfig;
+        console.log('[loadAvatarConfig] Set window.avatarConfig.voice_characteristics.gender to:', window.avatarConfig.voice_characteristics.gender);
+        
+        // Update visual appearance
+        if (data.visual_appearance) {
+          avatarConfig.visual_appearance = data.visual_appearance;
+        }
         
         // Update name
         if (data.name) {
@@ -1089,21 +1284,24 @@
         if (data.branding_elements) {
           avatarConfig.branding_elements = data.branding_elements;
           
+          // Apply theme colors to the entire UI - THIS IS KEY!
+          applyThemeColors(data.branding_elements.theme_colors);
+          
+          // Apply font family
+          applyFontFamily(data.branding_elements.font_family);
+          
           // Update header and info with company name or avatar name
           const displayName = data.branding_elements.company_name || data.name || 'AI Assistant';
           document.getElementById('avatarName').textContent = displayName;
           document.getElementById('avatarInfoName').textContent = displayName;
-          
-          // Apply theme colors
-          if (data.branding_elements.theme_colors && data.branding_elements.theme_colors.length > 0) {
-            const primaryColor = data.branding_elements.theme_colors[0];
-            document.documentElement.style.setProperty('--primary-color', primaryColor);
-          }
-          
-          // Apply font family
-          if (data.branding_elements.font_family) {
-            document.body.style.fontFamily = data.branding_elements.font_family;
-          }
+        }
+        
+        // Apply clothing colors after visual appearance is loaded
+        if (avatarConfig.visual_appearance && avatarConfig.visual_appearance.clothing) {
+          applyClothingColors(
+            avatarConfig.visual_appearance.clothing.primary_color,
+            avatarConfig.visual_appearance.clothing.secondary_color
+          );
         }
         
         // Update meta information with gender and tone
@@ -1116,24 +1314,74 @@
         document.getElementById('avatarInfoDesc').textContent = 
           `Your ${genderText.toLowerCase()} AI assistant with ${toneText} tone, ready to help with any questions.`;
         
-        showStatus('Avatar loaded: ' + displayName);
+        showStatus('Avatar loaded: ' + (avatarConfig.branding_elements.company_name || avatarConfig.name));
         
       } catch (err) {
         console.error('Error loading avatar config:', err);
         console.log('Using default configuration');
         showStatus('Ready');
+        applyThemeColors(avatarConfig.branding_elements.theme_colors);
+        applyClothingColors(avatarConfig.visual_appearance.clothing.primary_color, avatarConfig.visual_appearance.clothing.secondary_color);
       }
+    }
+    
+    // Generate a compact inline SVG data URI (reflects skin tone, clothing gradient, gender).
+    function generateInlineAvatarSVG(skinTone, primary, secondary, gender) {
+      const hairColor = gender === 'male' ? '#1f2937' : gender === 'female' ? '#3b2f2f' : '#4b5563';
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="360" height="396" viewBox="0 0 120 132">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="${primary}" />
+              <stop offset="1" stop-color="${secondary}" />
+            </linearGradient>
+          </defs>
+          <rect x="14" y="78" width="92" height="44" rx="10" fill="url(#g)"/>
+          <rect x="50" y="60" width="20" height="12" rx="2.5" fill="${skinTone}"/>
+          <rect x="28" y="12" width="64" height="64" rx="14" fill="${skinTone}" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/>
+          ${gender === 'female' ? `<path d="M28 34 C30 22,36 18,60 22 C84 18,90 22,92 34 L92 34 C88 44,88 70,74 78 C64 84,46 84,36 78 C22 70,22 44,28 34 Z" fill="${hairColor}" />` :
+            gender === 'male' ? `<path d="M30 28 C38 18,82 18,90 28 L90 28 C84 26,70 22,60 24 C50 22,36 26,30 28 Z" fill="${hairColor}" />` :
+            `<path d="M30 26 C40 16,80 16,90 26 C84 22,72 20,60 22 C48 20,36 22,30 26 Z" fill="${hairColor}" />`}
+          <ellipse cx="47.5" cy="46" rx="3.2" ry="2.6" fill="#111827"/>
+          <ellipse cx="72.5" cy="46" rx="3.2" ry="2.6" fill="#111827"/>
+          <path d="M52 60 q8 6 16 0" stroke="#3b3b3b" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+        </svg>`;
+      
+      // Return as data URI (URI-encoded svg to avoid base64 overhead)
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
     }
     
     // Initialize avatar
     async function initAvatar() {
-      // Load avatar configuration from API
+      // Load avatar configuration (may set avatarStaticImage.src if config param present)
       await loadAvatarConfig();
       
-      // Set avatar image based on gender
-      const avatarUrl = avatarImages[avatarConfig.gender] || avatarImages.female;
-      avatarStaticImage.src = avatarUrl;
-      avatarStaticImage.alt = avatarConfig.gender + ' AI Assistant';
+      // If loadAvatarConfig already set an image (inline SVG or logo) keep it.
+      const currentSrc = avatarStaticImage.getAttribute('src') || '';
+      
+      if (currentSrc && currentSrc.trim().length > 0) {
+        // already set by config; keep it
+        console.log('Using avatar image set by config:', currentSrc);
+      } else if (avatarConfig.branding_elements && avatarConfig.branding_elements.logo_url) {
+        // use saved logo if present
+        avatarStaticImage.src = avatarConfig.branding_elements.logo_url;
+        console.log('Using saved branding logo:', avatarStaticImage.src);
+      } else {
+        // fallback to stock avatar based on gender
+        const avatarUrl = avatarImages[avatarConfig.gender] || avatarImages.female;
+        avatarStaticImage.src = avatarUrl;
+        console.log('Using fallback avatar image:', avatarUrl);
+      }
+      
+      // Update alt and header icon consistently
+      avatarStaticImage.alt = (avatarConfig.branding_elements?.company_name || avatarConfig.name || 'AI Assistant') + ' avatar';
+      
+      const genderIcons = {
+        'male': '👨',
+        'female': '👩',
+        'neutral': '🤖'
+      };
+      headerAvatar.textContent = genderIcons[avatarConfig.gender] || '🤖';
       
       // Load voices for Web Speech API
       if ('speechSynthesis' in window) {
@@ -1151,6 +1399,9 @@
       avatarGlow.classList.add('active');
       avatarStatus.classList.add('speaking');
       headerAvatar.classList.add('speaking');
+      // lip movement
+      const mouth = document.getElementById('avatarMouth');
+      if (mouth) mouth.classList.add('speaking');
     }
     
     function stopSpeakingAnimation() {
@@ -1159,108 +1410,108 @@
       avatarGlow.classList.remove('active');
       avatarStatus.classList.remove('speaking');
       headerAvatar.classList.remove('speaking');
+      // stop lip movement
+      const mouth = document.getElementById('avatarMouth');
+      if (mouth) mouth.classList.remove('speaking');
     }
     
-    // Text-to-Speech using Web Speech API with avatar voice characteristics
+    // Browser-only TTS: pick best voice by name tokens and use avatar voice settings
     function speakText(text) {
       if (!('speechSynthesis' in window)) {
-        console.warn('Text-to-speech not supported');
+        showStatus('Browser TTS not supported');
         return;
       }
-      
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      
-      const utterance = new SpeechSynthesisUtterance(text);
-      const voiceConfig = avatarConfig.voice_characteristics;
-      
-      // Get available voices
-      const voices = window.speechSynthesis.getVoices();
-      
-      // Filter voices by gender - IMPORTANT FOR MALE/FEMALE VOICE
-      let selectedVoice = null;
-      
-      if (voiceConfig.gender === 'male') {
-        // Find male voice
-        selectedVoice = voices.find(voice => {
-          const name = voice.name.toLowerCase();
-          const lang = voice.lang.toLowerCase();
-          return lang.startsWith('en') && (name.includes('male') || name.includes('man') || name.includes('david') || name.includes('james')) && !name.includes('female');
-        });
-        
-        // Fallback male voices
-        if (!selectedVoice) {
-          selectedVoice = voices.find(voice => 
-            voice.lang.startsWith('en') && !voice.name.toLowerCase().includes('female')
-          );
-        }
-      } else if (voiceConfig.gender === 'female') {
-        // Find female voice
-        selectedVoice = voices.find(voice => {
-          const name = voice.name.toLowerCase();
-          const lang = voice.lang.toLowerCase();
-          return lang.startsWith('en') && (name.includes('female') || name.includes('woman') || name.includes('samantha') || name.includes('victoria'));
-        });
-        
-        // Fallback female voices
-        if (!selectedVoice) {
-          selectedVoice = voices.find(voice => 
-            voice.lang.startsWith('en') && voice.name.toLowerCase().includes('female')
-          );
-        }
-      }
-      
-      // Try to match accent if no gender match found yet
-      if (!selectedVoice && voiceConfig.accent) {
-        selectedVoice = voices.find(voice => {
-          const name = voice.name.toLowerCase();
-          const lang = voice.lang.toLowerCase();
-          
-          if (voiceConfig.accent.includes('british')) {
-            return lang.includes('gb') || name.includes('british') || name.includes('uk') || name.includes('daniel') || name.includes('kate');
-          } else if (voiceConfig.accent.includes('australian')) {
-            return lang.includes('au') || name.includes('australian') || name.includes('karen');
-          } else if (voiceConfig.accent.includes('indian')) {
-            return lang.includes('in') || name.includes('india') || name.includes('veena') || name.includes('rishi');
+
+      // token lists inspired by backend voice list
+      const maleTokens = ['guy','christopher','eric','roger','steffan','william','liam','james','wayne','michael','john','ryan','daniel','tom','mark','george','paul','steve','chris','luke','anthony','osmar','abdul','ahmed','ali','raul','diego','luis','juan','carlos','manuel','andres','fernando','guillermo'];
+      const femaleTokens = ['aria','ana','jenny','michelle','samantha','sara','joanna','anna','emma','luna','natasha','clara','emily','leah','molly','sabela','victoria','julie','elena','sofia','rosa','maria','isabel','teresa','gloria','carmen','laura','diana','monica','patricia','jessica','ashley','stephanie'];
+
+      const nameHas = (voice, tokens) => tokens.some(t => (voice.name || '').toLowerCase().includes(t));
+
+      // Get voices and pick best match
+      const getVoicesAndSpeak = () => {
+        let voices = window.speechSynthesis.getVoices() || [];
+        console.log('[speakText] Total voices available:', voices.length);
+
+        // Read gender from window.avatarConfig (updated by loadAvatarConfig)
+        const gender = (window.avatarConfig && window.avatarConfig.voice_characteristics && window.avatarConfig.voice_characteristics.gender)
+          ? (window.avatarConfig.voice_characteristics.gender || '').toLowerCase()
+          : 'neutral';
+        console.log('[speakText] Using gender from window.avatarConfig:', gender);
+
+        const enVoices = voices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
+        console.log('[speakText] English voices available:', enVoices.length);
+
+        let selected = null;
+
+        if (gender === 'male') {
+          // Try to find an English male voice first
+          selected = enVoices.find(v => nameHas(v, maleTokens) && !nameHas(v, femaleTokens));
+          console.log('[speakText] After EN male search:', selected ? selected.name : 'not found');
+          if (!selected) {
+            // Try any male voice
+            selected = voices.find(v => nameHas(v, maleTokens) && !nameHas(v, femaleTokens));
+            console.log('[speakText] After all-locales male search:', selected ? selected.name : 'not found');
           }
-          return lang.includes('us') || lang.includes('en-us');
-        });
-      }
-      
-      // Final fallback to first available English voice
-      if (!selectedVoice) {
-        selectedVoice = voices.find(voice => voice.lang.startsWith('en')) || voices[0];
-      }
-      
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        console.log('Selected voice:', selectedVoice.name, '- Gender:', voiceConfig.gender);
-      }
-      
-      // Apply voice characteristics
-      // Pitch: convert from -10 to +10 range to 0 to 2 range
-      utterance.pitch = Math.max(0.1, Math.min(2, 1 + (voiceConfig.pitch / 10)));
-      
-      // Rate/Speed
-      utterance.rate = Math.max(0.5, Math.min(2, voiceConfig.speed));
-      
-      // Add speaking animation callbacks
-      utterance.onstart = () => {
-        startSpeakingAnimation();
-        updateAudioUI(true);
+        } else if (gender === 'female') {
+          // Try to find an English female voice first
+          selected = enVoices.find(v => nameHas(v, femaleTokens) && !nameHas(v, maleTokens));
+          if (!selected) {
+            // Try any female voice
+            selected = voices.find(v => nameHas(v, femaleTokens) && !nameHas(v, maleTokens));
+          }
+        }
+
+        // Final fallback to first English voice or first voice
+        if (!selected) {
+          selected = enVoices[0] || voices[0] || null;
+        }
+
+        console.log('[speakText] Final selected voice:', selected ? selected.name : 'None', 'Lang:', selected ? selected.lang : 'N/A');
+
+        const utter = new SpeechSynthesisUtterance(text || '');
+        if (selected) {
+          try {
+            utter.voice = selected;
+          } catch (e) {
+            console.warn('Failed to set voice:', e);
+          }
+        }
+
+        const vc = window.avatarConfig && window.avatarConfig.voice_characteristics ? window.avatarConfig.voice_characteristics : {};
+        utter.pitch = (typeof vc.pitch === 'number') ? Math.max(0.5, Math.min(2, 1 + (vc.pitch / 10))) : 1;
+        utter.rate = (typeof vc.speed === 'number') ? Math.max(0.5, Math.min(2, vc.speed)) : 1;
+
+        console.log('[speakText] Pitch:', utter.pitch, 'Rate:', utter.rate);
+
+        utter.onstart = () => { startSpeakingAnimation(); updateAudioUI(true); };
+        utter.onend = () => { stopSpeakingAnimation(); updateAudioUI(false); };
+        utter.onerror = (err) => { console.warn('TTS error', err); stopSpeakingAnimation(); updateAudioUI(false); };
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utter);
       };
-      
-      utterance.onend = () => {
-        stopSpeakingAnimation();
-        updateAudioUI(false);
-      };
-      
-      utterance.onerror = () => {
-        stopSpeakingAnimation();
-        updateAudioUI(false);
-      };
-      
-      window.speechSynthesis.speak(utterance);
+
+      // Voices might not be loaded yet, so check and retry
+      let voices = window.speechSynthesis.getVoices() || [];
+      if (!voices || voices.length === 0) {
+        console.log('[speakText] Voices not loaded, waiting for onvoiceschanged');
+        window.speechSynthesis.onvoiceschanged = () => {
+          console.log('[speakText] onvoiceschanged fired');
+          getVoicesAndSpeak();
+        };
+        // Timeout fallback
+        setTimeout(() => {
+          voices = window.speechSynthesis.getVoices() || [];
+          if (voices.length > 0) {
+            console.log('[speakText] Timeout: voices loaded, proceeding');
+            getVoicesAndSpeak();
+          }
+        }, 700);
+      } else {
+        console.log('[speakText] Voices already loaded:', voices.length);
+        getVoicesAndSpeak();
+      }
     }
     
     // Escalation functions
@@ -1582,8 +1833,21 @@
         const payload = {
           avatar_id: AVATAR_ID,
           messages: conversationHistory,
-          session_id: sessionId
+          session_id: sessionId,
+          // CRITICAL: Send voice characteristics from avatar config
+          voice_gender: avatarConfig.voice_characteristics?.gender || null,
+          voice_tone: avatarConfig.voice_characteristics?.tone || null,
+          voice_accent: avatarConfig.voice_characteristics?.accent || null,
+          voice_speed: avatarConfig.voice_characteristics?.speed || null,
+          voice_pitch: avatarConfig.voice_characteristics?.pitch || null
         };
+        
+        console.log('=== SENDING TO BACKEND ===');
+        console.log('[sendMessage] Full payload:', payload);
+        console.log('[sendMessage] voice_gender being sent:', payload.voice_gender);
+        console.log('[sendMessage] avatar_id being sent:', payload.avatar_id);
+        console.log('[sendMessage] avatarConfig.voice_characteristics:', avatarConfig.voice_characteristics);
+        console.log('=== END ===');
         
         if (imageBase64) {
           payload.image_base64 = imageBase64;
@@ -1628,6 +1892,7 @@
           playAudio(data.audio_base64);
         } else {
           // Fallback to Web Speech API with avatar voice characteristics
+          // This will use the correct male/female voice based on avatar gender
           speakText(data.reply);
         }
         
@@ -1713,6 +1978,12 @@
     input.focus();
     
     console.log('Advanced chat initialized. Backend: ' + API_BASE);
+    console.log('Avatar customization features active:');
+    console.log('- Dynamic theme colors from designer');
+    console.log('- Custom fonts from designer');
+    console.log('- Gender-based voice selection (male/female)');
+    console.log('- Clothing color customization');
+    console.log('- Background gradient matching');
   </script>
 </body>
 </html>

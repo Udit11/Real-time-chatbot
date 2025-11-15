@@ -1,9 +1,43 @@
 // chat-widget/main.js
 // Minimal chat widget client — vanilla JS
-// Place this file at chat-widget/main.js and point index.html to it.
+// Uses server-side TTS only (no browser Web Speech API)
 
-const API_BASE = window.API_BASE || ""; // allow overriding via inline script (if needed)
+const API_BASE = window.API_BASE || "";
 const GENERATE_URL = `${API_BASE}/api/chat/generate`;
+
+// ===== DECODE CONFIG IMMEDIATELY =====
+let AVATAR_CONFIG = null;
+
+function decodeConfigFromURL() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const configParam = params.get('config');
+    if (!configParam) {
+      console.log('[decodeConfigFromURL] No config param in URL');
+      return null;
+    }
+
+    console.log('[decodeConfigFromURL] Found config param, decoding...');
+    const decoded = atob(decodeURIComponent(configParam));
+    const json = decodeURIComponent(escape(decoded));
+    const parsed = JSON.parse(json);
+    
+    console.log('[decodeConfigFromURL] SUCCESS! Decoded config:', parsed);
+    console.log('[decodeConfigFromURL] Gender:', parsed.voice_characteristics?.gender);
+    
+    // Set both global and window for compatibility
+    AVATAR_CONFIG = parsed;
+    window.avatarConfig = parsed;
+    
+    return parsed;
+  } catch (err) {
+    console.error('[decodeConfigFromURL] FAILED to decode:', err);
+    return null;
+  }
+}
+
+// Decode IMMEDIATELY on page load
+AVATAR_CONFIG = decodeConfigFromURL();
 
 // Utility
 function el(tag, attrs = {}, ...children) {
@@ -32,10 +66,32 @@ async function sendMessage(avatarId, messageText) {
   showStatus("Waiting for reply…");
 
   try {
+    // Get gender - try multiple fallback paths
+    let gender = null;
+    
+    if (AVATAR_CONFIG?.voice_characteristics?.gender) {
+      gender = AVATAR_CONFIG.voice_characteristics.gender;
+      console.log('[sendMessage] Got gender from AVATAR_CONFIG.voice_characteristics.gender:', gender);
+    } else if (AVATAR_CONFIG?.gender) {
+      gender = AVATAR_CONFIG.gender;
+      console.log('[sendMessage] Got gender from AVATAR_CONFIG.gender:', gender);
+    }
+    
+    console.log('[sendMessage] Final gender value:', gender);
+    console.log('[sendMessage] Full AVATAR_CONFIG:', JSON.stringify(AVATAR_CONFIG, null, 2));
+
+    const requestPayload = {
+      avatar_id: avatarId,
+      messages: [{ role: "user", content: messageText }],
+      voice_gender: gender  // Send the gender!
+    };
+
+    console.log('[sendMessage] Sending payload:', JSON.stringify(requestPayload));
+
     const resp = await fetch(GENERATE_URL, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ avatar_id: avatarId, message: messageText })
+      body: JSON.stringify(requestPayload)
     });
 
     if (!resp.ok) {
@@ -50,16 +106,25 @@ async function sendMessage(avatarId, messageText) {
     appendLocalMessage(reply, "bot");
     showStatus("");
 
-    // Play audio_url if provided
-    if (data.audio_url) {
-      const audio = new Audio(data.audio_url);
-      audio.play().catch(e => {
-        console.warn("Audio play failed:", e);
-        // fallback to TTS in browser
-        fallbackSpeak(reply);
-      });
+    // Server MUST provide audio_base64 with correct gender-based voice
+    if (data.audio_base64) {
+      try {
+        const audio = new Audio('data:audio/mp3;base64,' + data.audio_base64);
+        audio.onended = () => {
+          console.log('[audio] Playback ended');
+        };
+        audio.onerror = (err) => {
+          console.error('[audio] Playback error:', err);
+          showStatus("Audio playback failed");
+        };
+        await audio.play();
+      } catch (e) {
+        console.error("Audio playback failed:", e);
+        showStatus("Audio playback error: " + e.message);
+      }
     } else {
-      fallbackSpeak(reply);
+      console.warn("Server did not provide audio_base64");
+      showStatus("No audio provided by server");
     }
 
     // Optionally update avatar display if server returned avatar object
@@ -80,7 +145,6 @@ function appendLocalMessage(text, who) {
   const container = document.getElementById("messages");
   const bubble = createMessageBubble(text, who);
   container.appendChild(bubble);
-  // scroll
   container.scrollTop = container.scrollHeight;
 }
 
@@ -101,18 +165,6 @@ function focusInput() {
   input.focus();
 }
 
-function fallbackSpeak(text) {
-  try {
-    if (!("speechSynthesis" in window)) return;
-    const u = new SpeechSynthesisUtterance(text);
-    // you can set voice/lang here if desired
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-  } catch (e) {
-    console.warn("SpeechSynthesis failed:", e);
-  }
-}
-
 function setAvatarHeader(avatar) {
   const nameEl = document.getElementById("avatarName");
   const metaEl = document.getElementById("avatarMeta");
@@ -127,9 +179,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendBtn = document.getElementById("sendBtn");
   const input = document.getElementById("messageInput");
   const form = document.getElementById("chatForm");
-  const previewAvatarId = document.body.dataset.avatarId || null;
+  let previewAvatarId = null;
 
-  // initial header (will be overridden when server returns avatar)
+  console.log('[DOMContentLoaded] AVATAR_CONFIG at DOM ready:', AVATAR_CONFIG);
+
+  // Use AVATAR_CONFIG that was decoded at page load
+  if (AVATAR_CONFIG) {
+    previewAvatarId = AVATAR_CONFIG.id;
+    console.log('[DOMContentLoaded] Avatar ID:', previewAvatarId);
+    console.log('[DOMContentLoaded] Avatar gender:', AVATAR_CONFIG.voice_characteristics?.gender);
+  } else {
+    console.log('[DOMContentLoaded] No AVATAR_CONFIG found');
+  }
+
+  // initial header
   setAvatarHeader({ name: "Preview Avatar", voice_characteristics: { gender: "female", tone: "warm_friendly", speed: 1 }, personality_traits: { formality: "professional" }});
 
   form.addEventListener("submit", (ev) => {

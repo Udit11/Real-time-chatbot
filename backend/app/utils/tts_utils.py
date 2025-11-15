@@ -1,130 +1,76 @@
-# app/utils/tts_utils.py
-import os
-import uuid
-import tempfile
-from typing import Dict, Tuple
+"""
+Text-to-Speech utilities for voice selection and synthesis
+"""
 
-import edge_tts  # pip install edge-tts
-# edge-tts: uses async Communicate().save(path) which we await in synthesize
+# Male voices from voice_list.txt (en-US)
+MALE_VOICES = [
+    "en-US-GuyNeural",           # Passion (primary)
+    "en-US-ChristopherNeural",   # Reliable, Authority
+    "en-US-EricNeural",          # Rational
+    "en-US-RogerNeural",         # Lively
+    "en-US-SteffanNeural",       # Rational
+]
 
-# Map (gender, tone) -> Edge voice config with voice name and parameters
-# Using more natural, expressive female voices by default
-EDGE_VOICE_MAP: Dict[Tuple[str, str], Dict[str, str]] = {
-    ("female", "warm_friendly"): {
-        "voice": "en-US-AriaNeural",
-        "rate": "+5%",      # Slightly faster for natural conversation
-        "pitch": "+2Hz"     # Slightly higher for warmth
-    },
-    ("female", "professional"): {
-        "voice": "en-US-JennyNeural",
-        "rate": "+0%",
-        "pitch": "+0Hz"
-    },
-    ("female", "casual"): {
-        "voice": "en-US-SaraNeural",
-        "rate": "+8%",
-        "pitch": "+3Hz"
-    },
-    ("male", "warm_friendly"): {
-        "voice": "en-US-GuyNeural",
-        "rate": "+3%",
-        "pitch": "+0Hz"
-    },
-    ("male", "professional"): {
-        "voice": "en-US-ChristopherNeural",
-        "rate": "+0%",
-        "pitch": "+0Hz"
-    },
-    ("male", "casual"): {
-        "voice": "en-GB-RyanNeural",
-        "rate": "+5%",
-        "pitch": "+0Hz"
-    },
-}
+# Female voices from voice_list.txt (en-US)
+FEMALE_VOICES = [
+    "en-US-AriaNeural",          # Positive, Confident (default fallback)
+    "en-US-JennyNeural",         # Friendly, Considerate, Comfort
+    "en-US-MichelleNeural",      # Friendly, Pleasant
+    "en-US-AnaNeural",           # Cute
+]
 
-# Default configurations by gender
-DEFAULT_BY_GENDER = {
-    "female": {
-        "voice": "en-US-AriaNeural",  # Natural, expressive female voice
-        "rate": "+5%",
-        "pitch": "+2Hz"
-    },
-    "male": {
-        "voice": "en-US-GuyNeural",
-        "rate": "+3%",
-        "pitch": "+0Hz"
-    },
-}
-
-# Absolute fallback if nothing matches
-FALLBACK_CONFIG = {
-    "voice": "en-US-AriaNeural",  # Default to natural female voice
-    "rate": "+5%",
-    "pitch": "+2Hz"
-}
+# Default voice (female)
+DEFAULT_VOICE = "en-US-AriaNeural"
 
 
-def get_voice_config(voice_characteristics: Dict) -> Dict[str, str]:
+def get_voice_config(voice_characteristics: dict) -> dict:
     """
-    Get complete voice configuration including voice name, rate, and pitch.
+    Get voice configuration based on voice characteristics.
     
     Args:
-        voice_characteristics: Dict with 'gender' and 'tone' keys
-        
-    Returns:
-        Dict with 'voice', 'rate', and 'pitch' keys
-    """
-    gender = (voice_characteristics or {}).get("gender", "").lower()
-    tone = (voice_characteristics or {}).get("tone", "").lower().replace(" ", "_")
-
-    # Try exact match (gender, tone)
-    key = (gender, tone)
-    if key in EDGE_VOICE_MAP:
-        return EDGE_VOICE_MAP[key].copy()
-
-    # Try matching only gender (any tone) - use first match
-    for (g, t), config in EDGE_VOICE_MAP.items():
-        if g == gender:
-            return config.copy()
-
-    # Fallback to gender default
-    if gender in DEFAULT_BY_GENDER:
-        return DEFAULT_BY_GENDER[gender].copy()
+        voice_characteristics: Dict with 'gender' and optionally 'tone'
+        Example: {"gender": "male", "tone": "warm_friendly"}
     
-    # Ultimate fallback
-    return FALLBACK_CONFIG.copy()
-
-
-def pick_edge_voice(voice_characteristics: Dict) -> str:
-    """
-    Legacy function - returns just the voice name.
-    Kept for backward compatibility.
-    
-    Args:
-        voice_characteristics: Dict with 'gender' and 'tone' keys
-        
     Returns:
-        Voice short name string
+        Dict with 'voice' (shortname), 'rate', 'pitch'
     """
-    config = get_voice_config(voice_characteristics)
-    return config["voice"]
-
-
-async def synthesize_edge_tts_to_file(text: str, voice_shortname: str, output_format: str = "audio-16khz-128kbitrate-mono-mp3") -> str:
-    """
-    Synthesize `text` with edge-tts using `voice_shortname`.
-    Saves to a temp file and returns the file path (you must remove it later).
-    output_format: optional; edge-tts supports a range of formats. Default returns mp3.
-    """
-    # create a unique temp path (avoid NamedTemporaryFile on Windows issues)
-    tmpdir = tempfile.gettempdir()
-    out_name = f"{uuid.uuid4().hex}.mp3"
-    out_path = os.path.join(tmpdir, out_name)
-
-    communicate = edge_tts.Communicate(text, voice=voice_shortname)
-
-    # The save method will produce the audio file. We can set `input_text_type` if using SSML.
-    # Optionally you can pass output format via environment or communicate API; edge-tts supports
-    # setting the output format when saving in latest versions but using default mp3 is simplest.
-    await communicate.save(out_path)  # creates out_path (mp3)
-    return out_path
+    gender = (voice_characteristics.get("gender") or "").strip().lower()
+    tone = (voice_characteristics.get("tone") or "warm_friendly").strip().lower()
+    
+    print(f"[get_voice_config] Input gender: '{gender}', tone: '{tone}'")
+    
+    # Select voice based on gender
+    if gender == "male":
+        voice = MALE_VOICES[0]  # en-US-GuyNeural (Passion)
+        print(f"[get_voice_config] ✓ Selected MALE voice: {voice}")
+    elif gender == "female":
+        voice = FEMALE_VOICES[0]  # en-US-AriaNeural (default)
+        print(f"[get_voice_config] ✓ Selected FEMALE voice: {voice}")
+    else:
+        # For "neutral" or empty, default to female
+        voice = DEFAULT_VOICE
+        print(f"[get_voice_config] Gender '{gender}' -> defaulting to: {voice}")
+    
+    # Rate adjustments based on tone
+    rate_map = {
+        "calm": "-10%",
+        "slow": "-15%",
+        "fast": "+10%",
+        "energetic": "+5%",
+        "warm_friendly": "+0%",
+    }
+    rate = rate_map.get(tone, "+0%")
+    
+    # Pitch adjustments based on tone
+    pitch_map = {
+        "deep": "-10Hz",
+        "high": "+10Hz",
+        "warm_friendly": "+0Hz",
+    }
+    pitch = pitch_map.get(tone, "+0Hz")
+    
+    return {
+        "voice": voice,
+        "rate": rate,
+        "pitch": pitch,
+    }
